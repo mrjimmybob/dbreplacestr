@@ -33,8 +33,8 @@ fn help() {
     println!("Version: {}.{}.{}.", mayor_version, minor_version, revision);
 }
 
-fn error(msg: String, err: String) {
-    println!("{} {} [{}]", "Error:".bright_red(), msg.red(), err.white());
+fn print_error(msg: String, err: String) {
+    println!("{} {} [{}]", "Fatal error:".bright_red(), msg.red(), err.white());
     process::exit(0x0100);
 }
 
@@ -51,7 +51,7 @@ fn replace_case_insensitive(text: &str, from: &str, to: &str) -> String {
 }
 
 fn read_file(infile: &str) -> Result<String, std::io::Error> {
-    let file: File = File::open(infile)?;     // Input file 
+    let file: File = File::open(infile)?;
     let reader: BufReader<File> = BufReader::new(file);
     let lines = utf16_reader::read_to_string(reader);
     Ok(lines)
@@ -61,8 +61,14 @@ fn replace_strings(lines: String, outfile: String, pairs: &Vec<Pair>) {
     let mut total: u32 = 0;
     let mut total_changed: u32 = 0;
     
-    let mut output = File::create(outfile).unwrap();    // Output file
-
+    let mut output = match File::create(outfile) {
+        Ok(output) => output,
+        Err(e) => {
+            print_error("Error creating file for output".to_string(), e.to_string());
+            process::exit(0x0100);
+        },
+    };
+ 
     for line in lines.lines() {
         let mut new_line: String = String::from(line);
 
@@ -74,7 +80,11 @@ fn replace_strings(lines: String, outfile: String, pairs: &Vec<Pair>) {
             }
         }
 
-        write!(output, "{}\r\n", new_line).unwrap();
+        let _ = match write!(output, "{}\r\n", new_line) {
+            Ok(_) => Ok(()),
+            Err(error) => Err(error),
+        };
+    
         total += 1;
     }
 
@@ -92,7 +102,7 @@ fn process_file(infile: String, outfile: String, pairs: &Vec<Pair>) -> io::Resul
     let lines = read_file(infile.as_str());
     match lines {
         Ok(contents) => replace_strings(contents, outfile, pairs),
-        Err(e) => error(String::from("Error opening file"), e.to_string()),
+        Err(e) => print_error(String::from("Error opening file"), e.to_string()),
     }
     Ok(())
 }
