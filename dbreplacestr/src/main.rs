@@ -33,6 +33,11 @@ fn help() {
     println!("Version: {}.{}.{}.", mayor_version, minor_version, revision);
 }
 
+fn error(msg: String, err: String) {
+    println!("{} {} [{}]", "Error:".bright_red(), msg.red(), err.white());
+    process::exit(0x0100);
+}
+
 fn replace_case_insensitive(text: &str, from: &str, to: &str) -> String {
     let mut result = String::new();
     let mut last_end = 0;
@@ -45,39 +50,50 @@ fn replace_case_insensitive(text: &str, from: &str, to: &str) -> String {
     result
 }
 
-fn process_file(infile: String, outfile: String, pairs: &Vec<Pair>) -> io::Result<()> {
-    // Input file 
-    let file = File::open(infile).unwrap();
-    let reader = BufReader::new(file);
-    // Output file
-    let mut output = File::create(outfile)?;
-    // let mut total_changed: u32 = 0;
-    let mut total: u32 = 0;
+fn read_file(infile: &str) -> Result<String, std::io::Error> {
+    let file: File = File::open(infile)?;     // Input file 
+    let reader: BufReader<File> = BufReader::new(file);
     let lines = utf16_reader::read_to_string(reader);
+    Ok(lines)
+}
+
+fn replace_strings(lines: String, outfile: String, pairs: &Vec<Pair>) {
+    let mut total: u32 = 0;
+    let mut total_changed: u32 = 0;
+    
+    let mut output = File::create(outfile).unwrap();    // Output file
+
     for line in lines.lines() {
         let mut new_line: String = String::from(line);
 
         for pair in pairs {
-            // new_line = new_line.replace(&pair.replace, &pair.replace_with);
-            new_line = replace_case_insensitive(&new_line, &pair.replace, &pair.replace_with)
+            let old_line: String = new_line.clone();
+            new_line = replace_case_insensitive(&new_line, &pair.replace, &pair.replace_with);
+            if old_line != new_line {
+                total_changed += 1;
+            }
         }
 
-        write!(output, "{}\n", new_line)?;
+        write!(output, "{}\r\n", new_line).unwrap();
         total += 1;
     }
 
-    println!("{} {} {}{}{} {} {}{}{}",
-        "Processed".cyan(),
+    println!("{} {} {} {} {}",
+        "Processed a total of".cyan(),
         total.to_string().yellow(), 
-        "lines and found the string '".cyan(),
-        "!", // replace.yellow(), 
-        "'".cyan(),
-        "!",// total_changed.to_string().yellow(), 
-        "times and changed it with '".cyan(),
-        "! ", //replace_with.yellow(),
-        "'.".cyan());
+        "lines and made a change in".cyan(),
+        total_changed.to_string().yellow(), 
+        "of them.".cyan());
     println!("{}", "Finished!".green());
-    
+
+}
+
+fn process_file(infile: String, outfile: String, pairs: &Vec<Pair>) -> io::Result<()> {
+    let lines = read_file(infile.as_str());
+    match lines {
+        Ok(contents) => replace_strings(contents, outfile, pairs),
+        Err(e) => error(String::from("Error opening file"), e.to_string()),
+    }
     Ok(())
 }
 
@@ -133,22 +149,16 @@ fn main() -> io::Result<()> {
                 }
             }
         }
-
-        
-        
-
     } else {
         error = String::from("Error in number of arguments, check help.");
     }
 
     if proceed && got_infile && got_outfile {
-        println!("{} {}", "OK:".green(), "Got args and willing to proceed...".yellow());
-
         println!("{}\t\t'{}'", "infile:".green(), infile.yellow());
         println!("{}\t'{}'", "outfile:".green(), outfile.yellow());
         println!("{}", "replacements:".green());
         for pair in &pairs {
-            println!("\t\treplace '{}' with '{}'", pair.replace.cyan(), pair.replace_with.green());
+            println!("\t\treplace '{}'\twith '{}'", pair.replace.cyan(), pair.replace_with.green());
         }
 
         let _ = process_file(infile, outfile, &pairs);
@@ -172,4 +182,3 @@ fn main() -> io::Result<()> {
       
     Ok(())
 }
-
