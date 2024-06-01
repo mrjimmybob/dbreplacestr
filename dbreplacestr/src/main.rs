@@ -81,19 +81,16 @@ fn replace_strings(lines: String, outfile: String, pairs: &Vec<Pair>) {
         }
 
         let _ = match write!(output, "{}\r\n", new_line) {
-            Ok(_) => Ok(()),
+            Ok(_) => {
+                total += 1;
+                Ok(())
+            },
             Err(error) => Err(error),
         };
-    
-        total += 1;
     }
 
-    println!("{} {} {} {} {}",
-        "Processed a total of".cyan(),
-        total.to_string().yellow(), 
-        "lines and made a change in".cyan(),
-        total_changed.to_string().yellow(), 
-        "of them.".cyan());
+    println!("{} {} {} {} {}", "Processed a total of".cyan(), total.to_string().yellow(), 
+        "lines and made a change in".cyan(), total_changed.to_string().yellow(), "of them.".cyan());
     println!("{}", "Finished!".green());
 
 }
