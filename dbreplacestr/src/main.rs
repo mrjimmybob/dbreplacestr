@@ -4,6 +4,7 @@ use std::io::{self, BufReader, Write};
 use colored::*;
 use std::vec::Vec;
 use std::process;
+use regex::Regex;
 
 struct Pair {
     replace: String,
@@ -50,11 +51,19 @@ fn replace_case_insensitive(text: &str, from: &str, to: &str) -> String {
     result
 }
 
+fn replace_words(text: &str, word1: &str, word2: &str, new_text: &str) -> String {
+    let pattern = format!(r"(?i)\b{}\s*{}\b", word1, word2); // r"(?i)\b{}\s*{}\b" "{}\\s*{}"
+    return Regex::new(&pattern).unwrap().replace_all(text, new_text).to_string();
+}
+
 fn read_file(infile: &str) -> Result<String, std::io::Error> {
     let file: File = File::open(infile)?;
     let reader: BufReader<File> = BufReader::new(file);
     let lines = utf16_reader::read_to_string(reader);
-    Ok(lines)
+    let new_text1 = replace_words(lines.as_str(), "CREATE","PROCEDURE", "ALTER PROCEDURE");
+    let new_text2 = replace_words(new_text1.as_str(), "CREATE","VIEW", "ALTER VIEW");
+    let new_text3 = replace_words(new_text2.as_str(), "CREATE","FUNCTION", "ALTER FUNCTION");
+    Ok(new_text3)
 }
 
 fn replace_strings(lines: String, outfile: String, pairs: &Vec<Pair>) {
@@ -103,6 +112,17 @@ fn process_file(infile: String, outfile: String, pairs: &Vec<Pair>) -> io::Resul
     }
     Ok(())
 }
+
+
+// fn main() {
+//     let text = "Today is Sunday, June 2, 2024 and here are the results: Sunday June is a holiday.";
+//     let word1 = "Sunday";
+//     let word2 = "June";
+//     let new_text = "Weekend Fun";
+//     println!("Original text: {}", text);
+//     println!("Replaced text: {}", replace_word(text, word1, word2, new_text));
+// }
+
 
 fn main() -> io::Result<()> {
     let mut proceed: bool = false;
