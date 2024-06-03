@@ -60,6 +60,7 @@ fn read_file(infile: &str) -> Result<String, std::io::Error> {
     let file: File = File::open(infile)?;
     let reader: BufReader<File> = BufReader::new(file);
     let lines = utf16_reader::read_to_string(reader);
+    // Before returning the text, change all the create funtion, view and procedure to alter...
     let new_text1 = replace_words(lines.as_str(), "CREATE","PROCEDURE", "ALTER PROCEDURE");
     let new_text2 = replace_words(new_text1.as_str(), "CREATE","VIEW", "ALTER VIEW");
     let new_text3 = replace_words(new_text2.as_str(), "CREATE","FUNCTION", "ALTER FUNCTION");
